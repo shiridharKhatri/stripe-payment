@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://js.stripe.com/v3/"></script>
+    <title>Checkout Page</title>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      .checkout-header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .checkout-header h1 {
+        font-size: 2rem;
+        color: #333;
+        margin: 0;
+      }
+
+      .item {
+        display: flex;
+        align-items: center;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+
+      .item img {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-right: 20px;
+      }
+
+      .item-details {
+        flex: 1;
+      }
+
+      .item-details h3 {
+        font-size: 1.25rem;
+        color: #333;
+        margin: 0;
+        margin-bottom: 10px;
+      }
+
+      .item-details p {
+        color: #666;
+        margin: 5px 0;
+      }
+
+      .item-details .price {
+        font-size: 1.25rem;
+        color: #27ae60;
+        font-weight: bold;
+      }
+
+      .total {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        text-align: right;
+        margin-bottom: 30px;
+      }
+
+      .total span {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #333;
+      }
+
+      .checkout-button {
+        display: block;
+        width: 100%;
+        max-width: 200px;
+        margin: 0 auto;
+        padding: 15px;
+        font-size: 1.125rem;
+        font-weight: bold;
+        color: #fff;
+        background-color: #27ae60;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: center;
+        transition: background-color 0.3s;
+      }
+
+      .checkout-button:hover {
+        background-color: #219150;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="checkout-header">
+        <h1>Checkout</h1>
+      </div>
+
+      <!-- Item 1 -->
+      <div class="item">
+        <img
+          src="https://www.apple.com/newsroom/images/product/airpods/standard/Apple_AirPods-Pro_New-Design_102819_big.jpg.large.jpg"
+          alt="Apple AirPods Pro"
+        />
+        <div class="item-details">
+          <h3>Apple AirPods Pro</h3>
+          <p>Active Noise Cancellation and Transparency mode.</p>
+          <p class="price">$249.99</p>
+        </div>
+      </div>
+
+      <!-- Item 2 -->
+      <div class="item">
+        <img
+          src="https://images.unsplash.com/photo-1593642532973-d31b6557fa68"
+          alt="Sony WH-1000XM4"
+        />
+        <div class="item-details">
+          <h3>Sony WH-1000XM4</h3>
+          <p>Wireless Noise Cancelling Over-Ear Headphones.</p>
+          <p class="price">$349.99</p>
+        </div>
+      </div>
+
+      <!-- Total Price -->
+      <div class="total">
+        <span>Total: $599.98</span>
+      </div>
+
+      <!-- Checkout Button -->
+      <button onclick="checkOut()" class="checkout-button">Checkout</button>
+    </div>
+ 
+    <script>
+      // Calculate total price
+      const items = [
+        {
+          name: "Apple AirPods Pro",
+          price: 249.99,
+          quantity: 2,
+          image:
+            "https://www.apple.com/newsroom/images/product/airpods/standard/Apple_AirPods-Pro_New-Design_102819_big.jpg.large.jpg",
+        },
+        {
+          name: "Sony WH-1000XM4",
+          price: 349.99,
+          quantity: 3,
+          image: "https://images.unsplash.com/photo-1593642532973-d31b6557fa68",
+        },
+      ];
+
+      const total = items.reduce((sum, item) => sum + item.price, 0);
+
+      document.querySelector(
+        ".total span"
+      ).textContent = `Total: $${total.toFixed(2)}`;
+      const checkOut = async () => {
+        // Initialize Stripe with your public key
+        const stripe = Stripe(
+          "pk_test_51N9PpqHN8gClun86QpFl1XEmA8hptgmi8e9RxDEZrD4AUbTZEKIJWKoqSu4CIaR1xQApxtWRNDpIp7O5SJM5PrNX004Sx3IwFG"
+        );
+
+        try {
+          // Prepare the request body
+          const body = JSON.stringify({ product: items });
+
+          // Make the request to your backend to create a payment intent
+          const response = await fetch("/create-payment-intent", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: body,
+          });
+
+          // Check if the response is okay (status code 200-299)
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+
+          // Parse the JSON response
+          const data = await response.json();
+
+          // Redirect to Stripe Checkout
+          const { error } = await stripe.redirectToCheckout({
+            sessionId: data.id,
+          });
+
+          // Handle any errors from redirectToCheckout
+          if (error) {
+            console.error("Error redirecting to checkout:", error);
+            alert("There was an error redirecting to the checkout page.");
+          }
+        } catch (error) {
+          // Handle errors from fetch or other parts of the process
+          console.error("Error during checkout:", error);
+          alert(
+            "There was an error processing your payment. Please try again."
+          );
+        }
+      };
+    </script>
+  </body>
+</html>
